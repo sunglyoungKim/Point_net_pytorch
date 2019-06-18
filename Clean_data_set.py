@@ -27,7 +27,7 @@ class data_clean():
         global max_num
         
         num_points = []
-        class_list =  sorted(os.listdir(self.root_dir))
+#         class_list =  sorted(os.listdir(self.root_dir))
 
 
         for i in range(len(class_list)):
@@ -40,6 +40,7 @@ class data_clean():
                             header = None, names = ['x', 'y', 'z', 'c'], sep = " ")
                     data_set = data_set[data_set.isnull().any(axis = 1)]
                     data_set = data_set.iloc[:, :-1]
+                    
 
                     n_pointers = len(data_set)
                     num_points.append(n_pointers)
@@ -55,14 +56,13 @@ class data_clean():
                             header = None, names = ['x', 'y', 'z', 'c'], sep = " ")
                     data_set = data_set[data_set.isnull().any(axis = 1)]
                     data_set = data_set.iloc[:, :-1]
-
-
+                    
                     n_pointers = len(data_set)
                     num_points.append(n_pointers)
        
     
         num_points_np = np.array(num_points)        
-        max_num = int(np.mean(num_points_np) +  np.std(num_points_np))
+        max_num = int(np.mean(num_points_np) + 2 * np.std(num_points_np))
 
         
         return max_num
@@ -78,12 +78,13 @@ class data_clean():
                     header = None, names = ['x', 'y', 'z', 'c'], sep = " ")
             data_set = data_set[data_set.isnull().any(axis = 1)]
             data_set = data_set.iloc[:, :-1]
+            data_set['class'] = i
             data_set = data_set.to_numpy() 
 
             max_min = (np.abs(np.max(data_set, axis = 0)) - np.abs(np.min(data_set, axis = 0))) / 2
 
 
-            Canonical_ST = np.zeros([1,3])
+            Canonical_ST = np.zeros([1,4])
 
             Canonical_ST[0,0] = max_min[0]
             Canonical_ST[0,1] = max_min[1]
@@ -93,7 +94,7 @@ class data_clean():
             
             df_repeated = pd.DataFrame(centered_point_clouds)
             
-          
+
             centered_point_clouds = self.match_up(df_repeated)
             
             
@@ -102,7 +103,7 @@ class data_clean():
             
             train_set = np.append(train_set, centered_point_clouds)
             
-        train_set = train_set.reshape(max_num, 3, -1)
+        train_set = train_set.reshape(-1, max_num, 4)
         
         
         return train_set
@@ -123,10 +124,16 @@ class data_clean():
     
     def total_set(self):
         
+        global class_list
+        global i 
+
         total_train_set = np.array([])
         total_test_set = np.array([])
+        
+        class_list =  sorted(os.listdir(self.root_dir))
 
-        class_list = os.listdir(self.root_dir) # to find how many classes are, of course 40.....
+
+#         class_list = os.listdir(self.root_dir) # to find how many classes are, of course 40.....
         max_num  = self.find_max_num()
 
 
@@ -140,20 +147,16 @@ class data_clean():
             train = self.centered_point_clouds(train_files)
             test = self.centered_point_clouds(test_files)
             
-            total_train_set = np.append(total_train_set, train)    
-            total_train_set = total_train_set.reshape(max_num, 3, -1)
-        
+            total_train_set = np.append(total_train_set, train)      
             total_test_set = np.append(total_test_set, test)
-            total_test_set = total_test_set.reshape(max_num, 3, -1)
-
-
+        
+        total_train_set = total_train_set.reshape(-1, max_num, 4)
+        total_test_set = total_test_set.reshape(-1, max_num, 4)
         
         return total_train_set, total_test_set
-    
 
-    
 if __name__ == "__main__":
-    data = data_clean('./ModelNet40/')
+    data = data_clean('./ModelNet10/')
     total_train_set, total_test_set = data.total_set()
     np.save('total_train_set.npy', total_train_set)
     np.save('total_test_set.npy', total_test_set)
